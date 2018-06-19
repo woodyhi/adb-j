@@ -1,0 +1,4 @@
+
+https://github.com/vidstige/jadb
+
+https://github.com/wudongyang/AdbServer

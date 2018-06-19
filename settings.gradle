@@ -1,0 +1,1 @@
+include ':app', ':lib-jadb', ':tcp-adb', ':adb-server', ':lib-adb4j'
