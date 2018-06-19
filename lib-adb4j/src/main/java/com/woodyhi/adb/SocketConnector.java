@@ -1,7 +1,9 @@
 package com.woodyhi.adb;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 /**
@@ -12,7 +14,8 @@ public class SocketConnector {
 
     public void connect(String ip, int port){
         try {
-            socket = new Socket(ip, port);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(ip, port), 3000);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -27,11 +30,12 @@ public class SocketConnector {
         return null;
     }
 
-    public void i(){
+    public InputStream i(){
         try {
-            socket.getInputStream();
+            return socket.getInputStream();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return null;
     }
 }

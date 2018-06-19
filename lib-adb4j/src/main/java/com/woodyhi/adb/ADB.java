@@ -1,5 +1,8 @@
 package com.woodyhi.adb;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -9,9 +12,7 @@ import java.nio.ByteOrder;
  */
 public class ADB implements ICommand{
 
-    private final
-
-    SocketConnector socketConnector;
+    private final SocketConnector socketConnector;
 
     public ADB(){
         socketConnector = new SocketConnector();
@@ -22,8 +23,40 @@ public class ADB implements ICommand{
         socketConnector.connect("10.102.20.11", 5555);
         int version = 0x01000000;
         int maxLength = 256 * 1024;
-        OutputStream outputStream = socketConnector.o();
-        outputStream.write();
+
+        read(socketConnector.i());
+    }
+
+
+    private void read(InputStream inputStream){
+        try {
+            InputStream is = inputStream;
+            byte[] buffer = new byte[1024];
+            int length = 0;
+//            boolean mRunning = true;
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//            while (mRunning) {
+                length = is.read(buffer, 0, buffer.length);
+                if (length == -1) {
+//                    disconnct();
+//                    mRunning = false;
+//                    break;
+                    System.out.println("no data");
+                    return;
+                }
+
+                bos.write(buffer, 0, length);
+                if (length < 1024) {
+//                    if (mCallback != null) {
+//                        mCallback.receive(bos.toByteArray());
+                    System.out.println(bos.toByteArray());
+                        bos.reset();
+//                    }
+                }
+//            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
