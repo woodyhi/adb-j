@@ -6,7 +6,6 @@ package com.woodyhi.adb;
 public class Main {
 
     public static void main(String[] args){
-        System.out.println("xxx");
         ADB adb = new ADB();
         adb.connect("10.102.20.11", 5555);
     }

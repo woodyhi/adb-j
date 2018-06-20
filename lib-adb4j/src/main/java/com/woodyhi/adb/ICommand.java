@@ -9,7 +9,9 @@ public interface ICommand {
 
     void pull();
 
-    void push();
+    void push(String path);
+
+    void push(String localpath, String remotepath);
 
     void install();
 

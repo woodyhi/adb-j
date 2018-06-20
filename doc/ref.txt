@@ -2,3 +2,11 @@
 https://github.com/vidstige/jadb
 
 https://github.com/wudongyang/AdbServer
+
+https://github.com/google/python-adb
+
+https://android.googlesource.com/platform/system/core/+/master/adb/OVERVIEW.TXT
+https://android.googlesource.com/platform/system/core/+/master/adb/SERVICES.TXT
+https://android.googlesource.com/platform/system/core/+/master/adb/protocol.txt
+
+https://gitlab.com/pbeeler/system_core/blob/f3217de32cff8f82a22de84f35d782307a4ed4da/adb/protocol.txt
