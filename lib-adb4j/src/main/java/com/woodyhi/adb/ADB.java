@@ -16,6 +16,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Properties;
 import java.util.logging.Logger;
 
 /**
@@ -49,9 +50,10 @@ public class ADB implements ICommand {
         public void connected() {
             System.out.println("socket connected");
             //
-            int maxLength = 256 * 1024;
-            StreamData streamData = new StreamData(Constants.A_CNXN, Constants.A_VERSION, maxLength, "host::features=shell_2".getBytes());
-            socketWrapper.send(streamData.toBytes());
+//            int maxLength = 256 * 4096;
+            int MAX_ADB_DATA = 4096;
+            StreamData streamData = new StreamData(Constants.A_CNXN, Constants.A_VERSION, MAX_ADB_DATA, "host::features=shell_2".getBytes());
+            streamData.write(socketWrapper.getOutputStream());
         }
 
         @Override
@@ -64,9 +66,13 @@ public class ADB implements ICommand {
 
             String str = String.format("%s command:%s, arg1:%s, arg2:%s, length:%s", getLabel(command), Integer.toHexString(command), arg1, arg2, length);
 //            logger.info(str);
-            byte[] data = new byte[length];
-            System.arraycopy(bytes, bytes.length - length, data, 0, length);
-            logger.info(str + "\n" + new String(data));
+//            byte[] data = new byte[length];
+//            System.arraycopy(bytes, bytes.length - length, data, 0, length);
+//            System.out.println(str + "\n" + new String(data));
+
+            byte[] data = new byte[bytes.length];
+            System.arraycopy(bytes, 24, data, 0, bytes.length - 24);
+            System.out.println(str + "           " + new String(data));
 
             String c = null;
             switch (command) {
@@ -75,23 +81,29 @@ public class ADB implements ICommand {
                     break;
                 case Constants.A_CNXN:
                     c = "CNXN";
-                    try {
-                        push2("lib-adb4j/test.apk", "/sdcard/tmp/test.apk");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
 
-//                    StreamData sd = new StreamData(Constants.A_SYNC, LOCAL_ID, REMOTE_ID, "sync:\u0000".getBytes());
-//                    sd.write(socketWrapper.getOutputStream());
+                    String ddd = new String(data);
+                    String[] da = ddd.split(":");
+                    System.out.println("split  " + da[0] + " " + da[1] + " " + da[2]);
+
+//                    StreamData open = new StreamData(Constants.A_OPEN, LOCAL_ID, 0, "upload".getBytes());
+//                    open.write(socketWrapper.getOutputStream());
+
+//                    try {
+//                        push2("lib-adb4j/test.apk", "/sdcard/tmp/test.apk");
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+
 
 //                    String cmd = "shell: pm install /sdcard/launcher-debug.apk";
 //                    StreamData streamData = new StreamData(Constants.A_OPEN, LOCAL_ID, REMOTE_ID, cmd.getBytes());
 //                    streamData.write(socketWrapper.getOutputStream());
 
-//                    String cmd = "shell:ls";
-//                    int maxLength = 256 * 1024;
-//                    StreamData streamData = new StreamData(Constants.A_OPEN, Constants.A_VERSION, 0, cmd.getBytes());
-//                    socketWrapper.send(streamData.toBytes());
+                    String cmd = "shell:ls -al";
+                    int maxLength = 256 * 1024;
+                    StreamData streamData = new StreamData(Constants.A_OPEN, LOCAL_ID, 0, cmd.getBytes());
+                    socketWrapper.send(streamData.toBytes());
 
                     break;
 
@@ -110,6 +122,11 @@ public class ADB implements ICommand {
                     break;
                 case Constants.A_AUTH:
                     c = "AUTH";
+
+                    byte[] bs = new byte[length];
+                    System.arraycopy(bytes, bytes.length - length, bs, 0, length);
+                    System.out.println(str + "          " + Util.bytesToHexFun2(bs));
+
                     StreamData streamData1 = new StreamData(Constants.A_AUTH, 3, 0, PUBLIC_KEY.getBytes());
                     streamData1.write(socketWrapper.getOutputStream());
                     break;
@@ -151,9 +168,11 @@ public class ADB implements ICommand {
     public ADB() {
     }
 
+//    private String host = "10.102.20.11";
+    private String host = "192.168.1.13";
     @Override
     public void connect(String ip, int port) {
-        socketWrapper = new SocketWrapper("10.102.20.11", 5555);
+        socketWrapper = new SocketWrapper(host, 5555);
         socketWrapper.setSocketCallback(socketCallback);
         socketWrapper.connect();
     }
@@ -288,17 +307,19 @@ public class ADB implements ICommand {
     }
 
     private void push2(String localfilepath, String remotepath) throws IOException {
-        logger.info("---push start---");
+        System.out.println("---push start---");
         /* first */
-        String remote = "/data/local/tmp/adbserver.apk,33206";
-//        String remote = "/sdcard/";
+//        String remote = "/data/local/tmp/adbserver.apk,33206";
+        String remote = "/sdcard/tmp/test.apk";
         if(remotepath != null && remotepath.length() > 0)
             remote = remotepath;
+
+
         ByteBuffer buf = ByteBuffer.allocate(8 + remote.length()).order(ByteOrder.LITTLE_ENDIAN);
         buf.put("SEND".getBytes("UTF-8"));
         buf.putInt(remote.length());
         buf.put(remote.getBytes("UTF-8"));
-        StreamData streamData = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, buf.array());
+        StreamData streamData = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, buf.array());
         streamData.write(socketWrapper.getOutputStream());
 
         /* second */
@@ -315,23 +336,24 @@ public class ADB implements ICommand {
             bb.putInt(len);
             bb.put(buff, 0, len);
 
-            StreamData data = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, bb.array());
+            StreamData data = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, bb.array());
+            data.writeLog = false;
             data.write(socketWrapper.getOutputStream());
         }
 
         /* third */
         ByteBuffer order = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
         order.put("DONE\u0000".getBytes("UTF-8"));
-        StreamData streamData1 = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, order.array());
+        StreamData streamData1 = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, order.array());
         streamData1.write(socketWrapper.getOutputStream());
 
         /* fourth */
         ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
         order2.put("QUIT\u0000".getBytes("UTF-8"));
-        StreamData streamData2 = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, order2.array());
+        StreamData streamData2 = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, order2.array());
         streamData2.write(socketWrapper.getOutputStream());
 
-        logger.info("---push end---");
+        System.out.println("---push end---");
     }
 
     @Override

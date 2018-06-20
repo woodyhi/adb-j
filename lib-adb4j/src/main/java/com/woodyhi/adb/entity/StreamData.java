@@ -127,8 +127,11 @@ public class StreamData {
     }
 
 
+    public boolean writeLog = true;
 
     public void write(OutputStream os){
+        if(writeLog)
+            System.out.println("\nadb send to device : " + Integer.toHexString(command));
         try {
             if (os != null) {
                 os.write(toBytes());

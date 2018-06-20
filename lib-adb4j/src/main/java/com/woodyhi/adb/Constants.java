@@ -33,10 +33,21 @@ public class Constants {
     public static final int A_WRTE = 0x45545257;
     public static final int A_AUTH = 0x48545541;
 
+    /* AUTH constants for arg0.*/
+    public static final int AUTH_TOKEN = 1;
+    public static final int AUTH_SIGNATURE = 2;
+    public static final int AUTH_RSAPUBLICKEY = 3;
+
+    /* ADB protocol version. */
     public static final int A_VERSION = 0x01000000;        // ADB protocol version
 
     public static final int ADB_VERSION_MAJOR = 1;         // Used for help/version information
     public static final int ADB_VERSION_MINOR = 0;         // Used for help/version information
 
     public static final int ADB_SERVER_VERSION = 26;    // Increment this when we want to force users to start a new adb server
+
+    /* Maximum size of a filesync DATA packet. */
+    public static final int MAX_PUSH_DATA = 2 * 1024;
+
+
 }

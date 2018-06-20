@@ -54,6 +54,12 @@ public class SocketWrapper {
                 int length;
                 while (true) {
                     try {
+                        if(inputStream.available() > 0){
+
+                        }else {
+                            continue;
+                        }
+
                         length = inputStream.read(buff);
 
                         if (length == -1) {
