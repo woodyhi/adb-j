@@ -2,27 +2,23 @@ package com.woodyhi.adb;
 
 import com.woodyhi.adb.entity.StreamData;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Properties;
 import java.util.logging.Logger;
 
 /**
  * Created by June on 2018/6/19.
  */
-public class ADB implements ICommand {
+public class ADB {
     Logger logger = Logger.getLogger(ADB.class.getSimpleName());
 
     private int REMOTE_ID = 0;
@@ -49,91 +45,111 @@ public class ADB implements ICommand {
         @Override
         public void connected() {
             System.out.println("socket connected");
-            //
-//            int maxLength = 256 * 4096;
             int MAX_ADB_DATA = 4096;
-            StreamData streamData = new StreamData(Constants.A_CNXN, Constants.A_VERSION, MAX_ADB_DATA, "host::features=shell_2".getBytes());
+            StreamData streamData = new StreamData(Constants.A_CNXN, Constants.A_VERSION, MAX_ADB_DATA, "host::\0".getBytes(Charset.forName("UTF-8")));
             streamData.write(socketWrapper.getOutputStream());
         }
 
+
         @Override
-        public void handleResult(byte[] bytes) {
-            ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
-            int command = buf.getInt();
-            int arg1 = buf.getInt();
-            int arg2 = buf.getInt();
-            int length = buf.getInt();
+        public void handleResult(StreamData msg) {
+            String str = String.format("%s command:%s, arg1:%s, arg2:%s, length:%s", getLabel(msg.command), Integer.toHexString(msg.command), msg.arg1, msg.arg2, msg.data_length);
+            System.out.println("RECV " + str + "           " + (msg.data == null? "null": new String(msg.data)));
 
-            String str = String.format("%s command:%s, arg1:%s, arg2:%s, length:%s", getLabel(command), Integer.toHexString(command), arg1, arg2, length);
-//            logger.info(str);
-//            byte[] data = new byte[length];
-//            System.arraycopy(bytes, bytes.length - length, data, 0, length);
-//            System.out.println(str + "\n" + new String(data));
-
-            byte[] data = new byte[bytes.length];
-            System.arraycopy(bytes, 24, data, 0, bytes.length - 24);
-            System.out.println(str + "           " + new String(data));
-
-            String c = null;
-            switch (command) {
+            switch (msg.command) {
                 case Constants.A_SYNC:
-                    c = "SYNC";
                     break;
                 case Constants.A_CNXN:
-                    c = "CNXN";
-
-                    String ddd = new String(data);
+                    String ddd = new String(msg.data);
                     String[] da = ddd.split(":");
                     System.out.println("split  " + da[0] + " " + da[1] + " " + da[2]);
 
-//                    StreamData open = new StreamData(Constants.A_OPEN, LOCAL_ID, 0, "upload".getBytes());
-//                    open.write(socketWrapper.getOutputStream());
+                    //                    StreamData open = new StreamData(Constants.A_OPEN, LOCAL_ID, 0, "upload".getBytes());
+                    //                    open.write(socketWrapper.getOutputStream());
 
-//                    try {
-//                        push2("lib-adb4j/test.apk", "/sdcard/tmp/test.apk");
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
+                    //                    try {
+                    //                        push2("lib-adb4j/app-toggle-adbtcp-debug.apk", "/sdcard/tmp/test.apk");
+                    //                    } catch (IOException e) {
+                    //                        e.printStackTrace();
+                    //                    }
 
 
-//                    String cmd = "shell: pm install /sdcard/launcher-debug.apk";
-//                    StreamData streamData = new StreamData(Constants.A_OPEN, LOCAL_ID, REMOTE_ID, cmd.getBytes());
-//                    streamData.write(socketWrapper.getOutputStream());
+//                                        String cmd = "shell:ls -al";
+//                                        int maxLength = 256 * 1024;
+//                                        StreamData streamData = new StreamData(Constants.A_OPEN, LOCAL_ID, 0, cmd.getBytes());
+//                                        socketWrapper.send(streamData.toBytes());
+//
+                    if(flag) {
+                        String dest = "sync:";
+                        ByteBuffer bbuf = ByteBuffer.allocate(dest.length() + 1);
+                        try {
+                            bbuf.put(dest.getBytes("UTF-8"));
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
+                        }
+                        bbuf.put((byte) 0);
+                        StreamData streamData = new StreamData(Constants.A_OPEN, ++LOCAL_ID, 0, bbuf.array());
+                        streamData.write(socketWrapper.getOutputStream());
 
-                    String cmd = "shell:ls -al";
-                    int maxLength = 256 * 1024;
-                    StreamData streamData = new StreamData(Constants.A_OPEN, LOCAL_ID, 0, cmd.getBytes());
-                    socketWrapper.send(streamData.toBytes());
+                        flag = false;
+                    }
+
+                    //                    try {
+                    //                        StreamData w1 = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, "ls -l".getBytes("UTF-8"));
+                    //                        w1.write(socketWrapper.getOutputStream());
+                    //                        StreamData w2 = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, new byte[]{0});
+                    //                        w2.write(socketWrapper.getOutputStream());
+                    //                    } catch (UnsupportedEncodingException e) {
+                    //                        e.printStackTrace();
+                    //                    }
 
                     break;
 
                 case Constants.A_OPEN:
-                    c ="OPEN";
                     break;
                 case Constants.A_OKAY:
-                    c = "OKAY";
-                    //                    REMOTE_ID = arg1;
+                    REMOTE_ID = msg.arg2;
+                    StreamData o = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, "STAT".getBytes());
+                    o.write(socketWrapper.getOutputStream());
+
+                    if(push){
+                        try {
+                            push2("lib-adb4j/app-toggle-adbtcp-debug.apk", "/sdcard/tmp/test.apk");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        push = false;
+                    }
+
                     break;
                 case Constants.A_CLSE:
-                    c = "CLSE";
                     break;
                 case Constants.A_WRTE:
-                    c = "WRTE";
+
+                    if(wr) {
+                        String cmd = "ls -l\n\0";
+                        StreamData streamData = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, cmd.getBytes());
+                        streamData.write(socketWrapper.getOutputStream());
+                        wr = false;
+                    }
+
+                    StreamData sd = new StreamData(Constants.A_OKAY, LOCAL_ID, REMOTE_ID, null);
+                    sd.write(socketWrapper.getOutputStream());
                     break;
                 case Constants.A_AUTH:
-                    c = "AUTH";
-
-                    byte[] bs = new byte[length];
-                    System.arraycopy(bytes, bytes.length - length, bs, 0, length);
-                    System.out.println(str + "          " + Util.bytesToHexFun2(bs));
-
+                    System.out.println(str + "          " + Util.bytesToHexFun2(msg.data));
                     StreamData streamData1 = new StreamData(Constants.A_AUTH, 3, 0, PUBLIC_KEY.getBytes());
                     streamData1.write(socketWrapper.getOutputStream());
                     break;
             }
+        }
 
+        boolean flag = true;
+        boolean wr = false;
+        boolean push = true;
 
-
+        @Override
+        public void handleResult(byte[] bytes) {
         }
     };
 
@@ -168,67 +184,19 @@ public class ADB implements ICommand {
     public ADB() {
     }
 
-//    private String host = "10.102.20.11";
-    private String host = "192.168.1.13";
-    @Override
     public void connect(String ip, int port) {
-        socketWrapper = new SocketWrapper(host, 5555);
+        socketWrapper = new SocketWrapper(ip, 5555);
         socketWrapper.setSocketCallback(socketCallback);
         socketWrapper.connect();
     }
 
-    private void send() {
-
+    public void write(String s) throws UnsupportedEncodingException {
+        StreamData w1 = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, s.getBytes("UTF-8"));
+        w1.write(socketWrapper.getOutputStream());
+        StreamData w2 = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, new byte[]{0});
+        w2.write(socketWrapper.getOutputStream());
     }
 
-    private void read(InputStream inputStream) {
-        try {
-            InputStream is = inputStream;
-            byte[] buffer = new byte[1024];
-            int length = 0;
-            //            boolean mRunning = true;
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            //            while (mRunning) {
-            length = is.read(buffer, 0, buffer.length);
-            if (length == -1) {
-                //                    disconnct();
-                //                    mRunning = false;
-                //                    break;
-                System.out.println("no data");
-                return;
-            }
-
-            bos.write(buffer, 0, length);
-            if (length < 1024) {
-                //                    if (mCallback != null) {
-                //                        mCallback.receive(bos.toByteArray());
-                System.out.println(new String(bos.toByteArray(), Charset.forName("UTF-8")));
-                StreamData streamData = StreamData.parseBytes(bos.toByteArray());
-                if (streamData.command == Constants.A_AUTH) {
-
-                    StreamData streamData1 = new StreamData(Constants.A_AUTH, 3, 0, PUBLIC_KEY.getBytes());
-                    streamData1.write(socketWrapper.getOutputStream());
-                }
-                bos.reset();
-                //                    }
-            }
-            //            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void pull() {
-
-    }
-
-    @Override
-    public void push(String path) {
-
-    }
-
-    @Override
     public void push(String localpath, String remotepath) {
         try {
             //            String location = "/data/local/tmp/adbserver.apk,33206";
@@ -310,7 +278,8 @@ public class ADB implements ICommand {
         System.out.println("---push start---");
         /* first */
 //        String remote = "/data/local/tmp/adbserver.apk,33206";
-        String remote = "/sdcard/tmp/test.apk";
+//        "{filename,mode}"
+        String remote = "/sdcard/tmp/test.apk,33206";
         if(remotepath != null && remotepath.length() > 0)
             remote = remotepath;
 
@@ -319,7 +288,7 @@ public class ADB implements ICommand {
         buf.put("SEND".getBytes("UTF-8"));
         buf.putInt(remote.length());
         buf.put(remote.getBytes("UTF-8"));
-        StreamData streamData = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, buf.array());
+        StreamData streamData = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, buf.array());
         streamData.write(socketWrapper.getOutputStream());
 
         /* second */
@@ -330,38 +299,35 @@ public class ADB implements ICommand {
         int len;
         byte[] buff = new byte[buffer_size];
         while ((len = inputStream.read(buff)) != -1) {
-            int count = len + 8;
-            ByteBuffer bb = ByteBuffer.allocate(count).order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer bb = ByteBuffer.allocate(8 + len).order(ByteOrder.LITTLE_ENDIAN);
             bb.put("DATA".getBytes("UTF-8"));
             bb.putInt(len);
             bb.put(buff, 0, len);
 
-            StreamData data = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, bb.array());
+            StreamData data = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, bb.array());
             data.writeLog = false;
             data.write(socketWrapper.getOutputStream());
         }
+        inputStream.close();
 
         /* third */
-        ByteBuffer order = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-        order.put("DONE\u0000".getBytes("UTF-8"));
-        StreamData streamData1 = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, order.array());
+        ByteBuffer order = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
+        order.put(("DONE\0").getBytes("UTF-8"));
+        StreamData streamData1 = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, order.array());
         streamData1.write(socketWrapper.getOutputStream());
 
         /* fourth */
         ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-        order2.put("QUIT\u0000".getBytes("UTF-8"));
-        StreamData streamData2 = new StreamData(Constants.A_WRTE, 0, REMOTE_ID, order2.array());
+        order2.put("QUIT\0".getBytes("UTF-8"));
+        StreamData streamData2 = new StreamData(Constants.A_WRTE, LOCAL_ID, REMOTE_ID, order2.array());
         streamData2.write(socketWrapper.getOutputStream());
 
         System.out.println("---push end---");
     }
 
-    @Override
     public void install() {
-        //        String path = Environment.getExternalStorageDirectory() + File.separator + "YuMeng/download/apks/net.myvst.v2_3120.apk.";
-        String path = "lib-adb4j/test.apk";
-        String command = "shell: pm install -r " + path;
-        StreamData streamData = new StreamData(Constants.A_OPEN, LOCAL_ID, REMOTE_ID, command.getBytes());
+        String cmd = "shell: pm install /sdcard/launcher-debug.apk";
+        StreamData streamData = new StreamData(Constants.A_OPEN, LOCAL_ID, REMOTE_ID, cmd.getBytes());
         streamData.write(socketWrapper.getOutputStream());
     }
 

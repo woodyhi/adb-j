@@ -1,9 +1,12 @@
 package com.woodyhi.adb;
 
+import com.woodyhi.adb.entity.StreamData;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
@@ -47,31 +50,13 @@ public class SocketWrapper {
             @Override
             public void run() {
                 InputStream inputStream = getInputStream();
-                byte[] buff = new byte[1024];
 
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-
-                int length;
                 while (true) {
                     try {
-                        if(inputStream.available() > 0){
-
-                        }else {
-                            continue;
+                        StreamData msg = StreamData.parse(inputStream);
+                        if (socketCallback != null) {
+                            socketCallback.handleResult(msg);
                         }
-
-                        length = inputStream.read(buff);
-
-                        if (length == -1) {
-                            System.exit(1);
-                        }
-
-                        bos.write(buff, 0, length);
-                        if (length < 1024) {
-                            onReceive(bos.toByteArray());
-                            bos.reset();
-                        }
-
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -81,7 +66,11 @@ public class SocketWrapper {
     }
 
     private void onReceive(byte[] bytes) {
-//        System.out.println("received : " + new String(bytes, Charset.forName("UTF-8")));
+        try {
+            System.out.println("received : " + new String(bytes, "US-ASCII"));
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
         if(socketCallback != null){
             socketCallback.handleResult(bytes);
         }

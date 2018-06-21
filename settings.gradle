@@ -1,1 +1,1 @@
-include ':app', ':lib-jadb', ':tcp-adb', ':adb-server', ':lib-adb4j'
+include ':app-adb-demo', ':app-toggle-adbtcp', ':adb-server', ':lib-adb4j', ':AdbLib'
