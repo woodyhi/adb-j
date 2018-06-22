@@ -1,4 +1,4 @@
-package test;
+package com.cgutman.adblib;
 
 import com.cgutman.adblib.AdbBase64;
 import com.cgutman.adblib.AdbConnection;
@@ -96,7 +96,8 @@ public class AdbTest {
         // Connect the socket to the remote host
         System.out.println("Socket connecting...");
         try {
-            sock = new Socket("10.102.20.11", 5555);
+//            sock = new Socket("10.102.20.11", 5555);
+            sock = new Socket("10.102.17.150", 5555);
         } catch (UnknownHostException e) {
             e.printStackTrace();
             return;

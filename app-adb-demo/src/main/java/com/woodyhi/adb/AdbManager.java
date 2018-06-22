@@ -27,10 +27,15 @@ import java.util.logging.Logger;
  */
 public class AdbManager {
     Logger logger = Logger.getLogger(AdbManager.class.getName());
-    //    static String host = "10.102.17.163";
+//        static String host = "10.102.17.163";
     static String host = "10.102.20.11";
+//    static String host = "10.102.17.150";
     static int port = 5555;
-    String dir = "/sdcard/tmp/";
+    /* local */
+    static String tmpdir = "/sdcard/tmp/";
+    /* remote */
+    static String pushpath = "/data/local/tmp/com.woodyhi.demo.adb";
+
 
     AdbConnection adb;
     Socket sock;
@@ -49,7 +54,7 @@ public class AdbManager {
     private void init(){
         // Setup the crypto object required for the AdbConnection
         try {
-            crypto = Util.setupCrypto(dir + "pub.key", dir + "priv.key");
+            crypto = Util.setupCrypto(tmpdir + "pub.key", tmpdir + "priv.key");
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             return;
@@ -132,7 +137,7 @@ public class AdbManager {
                         while (!stream.isClosed())
                             try {
                                 // Print each thing we read from the shell stream
-                                System.out.print(new String(stream.read(), "US-ASCII"));
+                                System.out.print("receivingthread===" + new String(stream.read(), "US-ASCII"));
                             } catch (UnsupportedEncodingException e) {
                                 e.printStackTrace();
                                 return;
@@ -204,11 +209,60 @@ public class AdbManager {
 //        }
 
         try {
-            push(Environment.getExternalStorageDirectory().getAbsolutePath() + "/app.apk", null);
+            push(Environment.getExternalStorageDirectory().getAbsolutePath() + "/app.apk", pushpath);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    AdbStream shellStream;
+    public void install(){
+        try {
+            stream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                // Open the shell stream of ADB
+                //        final AdbStream stream;
+                try {
+                    shellStream = adb.open("shell:pm install -t -r " + pushpath);
+//                    shellStream = adb.open("shell:am start -a android.intent.action.VIEW -t application/vnd.android.package-archive -d  file://" + tmpdir + "test.apk");
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                    return;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    return;
+                }
+                // Start the receiving thread
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        while (!shellStream.isClosed())
+                            try {
+                                // Print each thing we read from the shell stream
+                                System.out.print(new String(shellStream.read(), "US-ASCII"));
+                            } catch (UnsupportedEncodingException e) {
+                                e.printStackTrace();
+                                return;
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                                return;
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                return;
+                            }
+                    }
+                }).start();
+            }
+        });
     }
 }

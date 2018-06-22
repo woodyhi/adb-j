@@ -12,6 +12,7 @@ public class MainActivity extends AppCompatActivity {
     private Button connectBtn;
     private Button streamBtn;
     private Button testBtn;
+    private Button installBtn;
 
     private AdbManager adb;
 
@@ -22,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
         connectBtn = findViewById(R.id.connect);
         streamBtn = findViewById(R.id.stream);
         testBtn = findViewById(R.id.test);
+        installBtn = findViewById(R.id.install);
 
         connectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -49,6 +51,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        installBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                adb.install();
+            }
+        });
         adb = new AdbManager(this);
     }
 }

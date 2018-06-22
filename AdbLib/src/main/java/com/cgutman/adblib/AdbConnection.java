@@ -128,7 +128,7 @@ public class AdbConnection implements Closeable {
 						/* Verify magic and checksum */
 						if (!AdbProtocol.validateMessage(msg))
 							continue;
-						System.out.println("command " + Integer.toHexString(msg.command));
+//						System.out.println("connectThread===command " + Integer.toHexString(msg.command));
 						switch (msg.command)
 						{
 						/* Stream-oriented commands */
@@ -147,7 +147,7 @@ public class AdbConnection implements Closeable {
 							synchronized (waitingStream) {
 								if (msg.command == AdbProtocol.CMD_OKAY)
 								{
-									System.out.println("cmd okay");
+//									System.out.println("cmd okay");
 									/* We're ready for writes */
 									waitingStream.updateRemoteId(msg.arg0);
 									waitingStream.readyForWrite();
@@ -157,7 +157,7 @@ public class AdbConnection implements Closeable {
 								}
 								else if (msg.command == AdbProtocol.CMD_WRTE)
 								{
-									System.out.println("cmd wrte");
+//									System.out.println("cmd wrte");
 									/* Got some data from our partner */
 									waitingStream.addPayload(msg.payload);
 									
@@ -166,7 +166,7 @@ public class AdbConnection implements Closeable {
 								}
 								else if (msg.command == AdbProtocol.CMD_CLSE)
 								{
-									System.out.println("cmd clse");
+//									System.out.println("cmd clse");
 
 									/* He doesn't like us anymore :-( */
 									conn.openStreams.remove(msg.arg1);
