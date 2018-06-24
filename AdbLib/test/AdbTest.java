@@ -131,7 +131,7 @@ public class AdbTest {
         // Open the shell stream of ADB
         final AdbStream stream;
         try {
-            stream = adb.open("sync:");
+            stream = adb.open("shell:");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             return;
