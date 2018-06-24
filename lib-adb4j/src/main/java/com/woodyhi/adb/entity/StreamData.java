@@ -3,6 +3,7 @@ package com.woodyhi.adb.entity;
 import com.woodyhi.adb.Util;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -20,6 +21,10 @@ public class StreamData {
     public int magic;         /* command ^ 0xffffffff             */
 
     public byte[] data;
+
+    public StreamData(){
+
+    }
 
     public StreamData(int command, int arg1, int arg2, byte[] data) {
         this.command = command;
@@ -67,6 +72,51 @@ public class StreamData {
             buf.put(data);
         }
         return buf.array();
+    }
+
+    public static StreamData parse(InputStream in) throws IOException {
+        StreamData msg = new StreamData();
+        ByteBuffer packet = ByteBuffer.allocate(24).order(ByteOrder.LITTLE_ENDIAN);
+
+        /* Read the header first */
+        int dataRead = 0;
+        do
+        {
+            int bytesRead = in.read(packet.array(), dataRead, 24 - dataRead);
+
+            if (bytesRead < 0)
+                throw new IOException("Stream closed");
+            else
+                dataRead += bytesRead;
+        }
+        while (dataRead < 24);
+
+        /* Pull out header fields */
+        msg.command = packet.getInt();
+        msg.arg1 = packet.getInt();
+        msg.arg2 = packet.getInt();
+        msg.data_length = packet.getInt();
+        msg.data_crc32 = packet.getInt();
+        msg.magic = packet.getInt();
+
+        /* If there's a payload supplied, read that too */
+        if (msg.data_length != 0)
+        {
+            msg.data = new byte[msg.data_length];
+
+            dataRead = 0;
+            do
+            {
+                int bytesRead = in.read(msg.data, dataRead, msg.data_length - dataRead);
+
+                if (bytesRead < 0)
+                    throw new IOException("Stream closed");
+                else
+                    dataRead += bytesRead;
+            }
+            while (dataRead < msg.data_length);
+        }
+        return msg;
     }
 
     public static StreamData parseBytes(byte[] bytes){

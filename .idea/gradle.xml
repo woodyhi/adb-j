@@ -8,11 +8,11 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/AdbLib" />
             <option value="$PROJECT_DIR$/adb-server" />
-            <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/app-adb-demo" />
+            <option value="$PROJECT_DIR$/app-toggle-adbtcp" />
             <option value="$PROJECT_DIR$/lib-adb4j" />
-            <option value="$PROJECT_DIR$/lib-jadb" />
-            <option value="$PROJECT_DIR$/tcp-adb" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />
