@@ -11,28 +11,37 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <EditText
+            android:id="@+id/edit_text"
+            android:layout_width="match_parent"
+            android:text="10.102."
+            android:layout_height="wrap_content"/>
+
         <Button
             android:id="@+id/connect"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="connect"/>
 
         <Button
-            android:id="@+id/stream"
-            android:layout_width="wrap_content"
+            android:id="@+id/push"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="stream"/>
-
-        <Button
-            android:id="@+id/test"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="test"/>
+            android:text="push"/>
         <Button
             android:id="@+id/install"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="install   "/>
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+            <TextView
+                android:id="@+id/log_text"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        </ScrollView>
+
     </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">adbtcp-state</string>
+    <string name="app_name">adbtcp-status</string>
 
     <string name="get_tcp_port_command">getprop service.adb.tcp.port</string>
     <string name="get_ipaddress_command">getprop dhcp.wlan0.ipaddress</string>
