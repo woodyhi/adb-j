@@ -3,6 +3,7 @@ package com.woodyhi.demo.adb;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -35,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
         pushBtn = findViewById(R.id.push);
         installBtn = findViewById(R.id.install);
         logTextView = findViewById(R.id.log_text);
+        logTextView.setMovementMethod(ScrollingMovementMethod.getInstance());
+        logTextView.setHorizontallyScrolling(true); // 不让超出屏幕的文本自动换行，使用滚动条
+        logTextView.setFocusable(true);
 
         connectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -48,34 +52,37 @@ public class MainActivity extends AppCompatActivity {
         });
 
         pushBtn.setOnClickListener(new View.OnClickListener() {
-            long tag;
+            int index = -1;
+            long time;
             @Override
             public void onClick(View v) {
-                tag = System.currentTimeMillis();
                 adbHelper.push(new PushAction.Callback() {
                     @Override
                     public void success() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                logList.add("push success ^0^");
-                                log();
-                            }
-                        });
+                        log("push success ^0^");
                     }
 
                     @Override
                     public void progress(final int total, final int progress) {
+                        String sp = "";
+                        if(time == 0){
+                            time = System.currentTimeMillis();
+                        }else {
+                            long d = System.currentTimeMillis() - time;
+                            float s = (float)progress  / d;
+                            sp = String.format("%.2fKB/s", s);
+                        }
+                        final String spd = sp;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                int tagIdx = logList.indexOf("" + tag);
-                                if(tagIdx < 0) {
-                                    logList.add("" + tag);
-                                    logList.add("totalSize:" + total + ", transfered: " + progress);
+                                String m = "totalSize:" + total + ", transfered: " + progress + ", speed: " + spd;
+                                if(index == -1){
+                                    logList.add(m);
+                                    index = logList.indexOf(m);
                                 }else {
-                                    logList.remove(tagIdx + 1);
-                                    logList.add(tagIdx + 1, "totalSize:" + total + ", transfered: " + progress);
+                                    logList.remove(index);
+                                    logList.add(index, m);
                                 }
                                 log();
                             }
@@ -84,13 +91,7 @@ public class MainActivity extends AppCompatActivity {
 
                     @Override
                     public void fail() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                logList.add("push fail T_T");
-                                log();
-                            }
-                        });
+                        log("push fail T_T");
                     }
                 });
             }
@@ -99,19 +100,13 @@ public class MainActivity extends AppCompatActivity {
         installBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                logList.add("start install");
-                logList.add("如有安装提示框，请点击安装...");
-                log();
+                log("start install");
+                log("如有安装提示框，请点击‘安装’按钮");
+
                 adbHelper.install(new InstallAction.Callback() {
                     @Override
                     public void receive(final String msg) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                logList.add(msg);
-                                log();
-                            }
-                        });
+                        log(msg);
                     }
                 });
             }
@@ -121,50 +116,36 @@ public class MainActivity extends AppCompatActivity {
         adbHelper.setAdbConnectListener(new AdbHelper.AdbConnectListener() {
             @Override
             public void socketConnectStart() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        logList.add("socket connecting");
-                        log();
-                    }
-                });
+                log("socket connecting");
             }
 
             @Override
             public void socketConnected() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        logList.add("socket connected");
-                        log();
-                    }
-                });
+                log("socket connected");
             }
 
             @Override
             public void adbConnectStart() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        logList.add("adb connecting");
-                        log();
-                    }
-                });
+                log("adb connecting");
             }
 
             @Override
             public void adbConnected() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        logList.add("adb connected");
-                        log();
-                    }
-                });
+                log("adb connected");
             }
         });
     }
 
+
+    private void log(final String msg){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                logList.add(msg);
+                log();
+            }
+        });
+    }
 
     private void log() {
         logTextView.setText("");
