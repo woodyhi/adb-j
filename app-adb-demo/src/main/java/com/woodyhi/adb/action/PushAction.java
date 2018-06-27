@@ -45,6 +45,10 @@ public class PushAction {
             e.printStackTrace();
             onFail();
             return;
+        } catch (IllegalStateException e){
+            e.printStackTrace();
+            onFail();
+            return;
         }
 
         // Start the receiving thread
@@ -94,6 +98,9 @@ public class PushAction {
     }
 
     public void push(InputStream inputStream, String remotepath) throws IOException, InterruptedException {
+        if(callback != null){
+            callback.onStart();
+        }
         /* first step */
         //        "{filename,mode}"
         //        String remote = "/sdcard/tmp/test.apk,33206";
@@ -108,7 +115,7 @@ public class PushAction {
 
         int totalSize = inputStream.available();
         int progress = 0;
-        System.out.println("file length " + totalSize);
+//        System.out.println("file length : " + totalSize);
         /* second step */
         int buffer_size = 2048;
         int len;
@@ -129,9 +136,9 @@ public class PushAction {
         stream.write(order.array());
 
         /* fourth step */
-        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-        order2.put("QUIT\0".getBytes("UTF-8"));
-        stream.write(order2.array());
+//        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
+//        order2.put("QUIT\0".getBytes("UTF-8"));
+//        stream.write(order2.array());
     }
 
     private void onSuccess() {
@@ -142,7 +149,7 @@ public class PushAction {
     }
 
     private void onProgress(int total, int progress){
-        System.out.println(progress + "/" + total);
+//        System.out.println(progress + "/" + total);
         if(callback != null){
             callback.progress(total, progress);
         }
@@ -151,14 +158,15 @@ public class PushAction {
     private void onFail() {
         System.out.println("push fail T_T");
         if(callback != null){
-            callback.fail();
+            callback.fail("push fail T_T");
         }
     }
 
 
     public interface Callback {
+        void onStart();
         void success();
         void progress(int total, int progress);
-        void fail();
+        void fail(String msg);
     }
 }

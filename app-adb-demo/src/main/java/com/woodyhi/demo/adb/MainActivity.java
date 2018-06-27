@@ -7,10 +7,11 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.woodyhi.adb.AdbHelper;
-import com.woodyhi.adb.action.InstallAction;
+import com.woodyhi.adb.action.InstallWithDeleteAction;
 import com.woodyhi.adb.action.PushAction;
 
 import java.util.ArrayList;
@@ -23,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
     private Button installBtn;
 
     private TextView logTextView;
-    private List<String> logList;
+    private List<String> logList = new ArrayList<>();
 
     private AdbHelper adbHelper;
 
@@ -45,7 +46,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 String ip = editText.getText().toString();
                 if (!TextUtils.isEmpty(ip)) {
-                    logList = new ArrayList<>();
                     adbHelper.connect(ip);
                 }
             }
@@ -57,6 +57,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 adbHelper.push(new PushAction.Callback() {
+                    @Override
+                    public void onStart() {
+                        index = -1;
+                    }
+
                     @Override
                     public void success() {
                         log("push success ^0^");
@@ -76,7 +81,8 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                String m = "totalSize:" + total + ", transfered: " + progress + ", speed: " + spd;
+                                String fm = "totalSize:%s, transfered:%s, avg speed: %s";
+                                String m = String.format(fm, total, progress, spd);
                                 if(index == -1){
                                     logList.add(m);
                                     index = logList.indexOf(m);
@@ -90,8 +96,8 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void fail() {
-                        log("push fail T_T");
+                    public void fail(String msg) {
+                        log(msg);
                     }
                 });
             }
@@ -100,13 +106,26 @@ public class MainActivity extends AppCompatActivity {
         installBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                log("start install");
-                log("如有安装提示框，请点击‘安装’按钮");
-
-                adbHelper.install(new InstallAction.Callback() {
+                adbHelper.install(new InstallWithDeleteAction.Callback() {
                     @Override
-                    public void receive(final String msg) {
+                    public void onStart() {
+                        log("start install");
+                        log("如有安装提示框，请点击‘安装’按钮");
+                    }
+
+                    @Override
+                    public void onSuccess() {
+                        log("安装成功了！");
+                    }
+
+                    @Override
+                    public void onReceive(String msg) {
                         log(msg);
+                    }
+
+                    @Override
+                    public void onFail() {
+
                     }
                 });
             }
@@ -116,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
         adbHelper.setAdbConnectListener(new AdbHelper.AdbConnectListener() {
             @Override
             public void socketConnectStart() {
-                log("socket connecting");
+                log("\nsocket connecting");
             }
 
             @Override
@@ -132,6 +151,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void adbConnected() {
                 log("adb connected");
+            }
+
+            @Override
+            public void error(String msg) {
+                log(msg);
             }
         });
     }
@@ -149,12 +173,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void log() {
         logTextView.setText("");
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < logList.size(); i++) {
             if (i == 0) {
-                logTextView.append(logList.get(i));
+                sb.append(logList.get(i));
             } else {
-                logTextView.append("\n" + logList.get(i));
+                sb.append("\n" + logList.get(i));
             }
         }
+        logTextView.setText(sb.toString());
+        int offset = (logTextView.getLineCount()) * logTextView.getLineHeight();
+        ScrollView scrollView = (ScrollView) logTextView.getParent();
+        scrollView.scrollTo(0, offset);
     }
 }

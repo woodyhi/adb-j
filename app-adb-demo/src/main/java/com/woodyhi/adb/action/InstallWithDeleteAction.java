@@ -9,7 +9,7 @@ import java.io.UnsupportedEncodingException;
 /**
  * Created by June on 2018/6/25.
  */
-public class InstallAction {
+public class InstallWithDeleteAction {
 
     private AdbConnection adb;
     private AdbStream adbStream;
@@ -20,14 +20,14 @@ public class InstallAction {
         this.callback = callback;
     }
 
-    public InstallAction(AdbConnection adbConnection) {
+    public InstallWithDeleteAction(AdbConnection adbConnection) {
         this.adb = adbConnection;
     }
 
     private void openStream(String apkpath) {
         // Open the shell stream of ADB
         try {
-            adbStream = adb.open("shell:pm install -t -r " + apkpath);
+            adbStream = adb.open("shell:");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             return;
@@ -35,6 +35,9 @@ public class InstallAction {
             e.printStackTrace();
             return;
         } catch (InterruptedException e) {
+            e.printStackTrace();
+            return;
+        } catch (IllegalStateException e) {
             e.printStackTrace();
             return;
         }
@@ -47,17 +50,25 @@ public class InstallAction {
                         // Print each thing we read from the shell stream
                         byte[] bytes = adbStream.read();
                         String result = new String(bytes, "US-ASCII");
-                        System.out.println(result);
+
+                        System.err.println("received:" + result);
+
                         if(callback != null){
                             callback.onReceive(result);
                         }
 
                         if("Success\r\n".equals(result)){
                             System.out.println("install sucess ^0^");
-                            adbStream.close();
+//                            adbStream.close();
+
+                            synchronized (InstallWithDeleteAction.this) {
+                                InstallWithDeleteAction.this.notify();
+                            }
+
                             if(callback != null){
                                 callback.onSuccess();
                             }
+
                         }
                     } catch (UnsupportedEncodingException e) {
                         e.printStackTrace();
@@ -78,6 +89,19 @@ public class InstallAction {
             callback.onStart();
         }
         openStream(apkpath);
+        if(adbStream == null){
+            return;
+        }
+
+        adbStream.write("pm install -t -r " + apkpath + "\n");
+
+        synchronized (InstallWithDeleteAction.this){
+            System.out.println("xxxxxxxxxxxxxxx");
+            this.wait();
+            System.out.println("yyyyyyyyyyyyyyy");
+        }
+        // 安装成功后删除
+        adbStream.write("rm " + apkpath + "\n");
     }
 
 

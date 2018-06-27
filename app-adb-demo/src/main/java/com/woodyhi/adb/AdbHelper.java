@@ -6,11 +6,12 @@ import android.os.HandlerThread;
 
 import com.cgutman.adblib.AdbConnection;
 import com.cgutman.adblib.AdbCrypto;
-import com.woodyhi.adb.action.InstallAction;
+import com.woodyhi.adb.action.InstallWithDeleteAction;
 import com.woodyhi.adb.action.PushAction;
 import com.woodyhi.demo.adb.R;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
@@ -27,6 +28,7 @@ public class AdbHelper {
     static String host = "192.168.1.104";
     //    static String host = "10.102.17.150";
     static int port = 5555;
+
     /* local */
     static String tmpdir;
 
@@ -39,6 +41,7 @@ public class AdbHelper {
     private AdbConnection adb;
     private Socket sock;
     private AdbCrypto crypto;
+    private boolean connected;
 
     private HandlerThread handleThread;
     private Handler threadHandler;
@@ -55,6 +58,7 @@ public class AdbHelper {
         void socketConnected();
         void adbConnectStart();
         void adbConnected();
+        void error(String msg);
     }
 
     public AdbHelper(Context context) {
@@ -66,7 +70,7 @@ public class AdbHelper {
     }
 
 
-    private void init() {
+    private void adbConnect() {
         // Setup the crypto object required for the AdbConnection
         try {
             crypto = AdbCryptoUtil.setupCrypto(tmpdir + "/pub.key", tmpdir + "/priv.key");
@@ -86,12 +90,17 @@ public class AdbHelper {
         if (adbConnectListener != null)
             adbConnectListener.socketConnectStart();
         try {
-            sock = new Socket(host, port);
+            sock = new Socket();
+            sock.connect(new InetSocketAddress(host, port), 3000);
         } catch (UnknownHostException e) {
             e.printStackTrace();
+            if(adbConnectListener != null)
+                adbConnectListener.error(e.getMessage());
             return;
         } catch (IOException e) {
             e.printStackTrace();
+            if(adbConnectListener != null)
+                adbConnectListener.error(e.getMessage());
             return;
         }
         System.out.println("Socket connected");
@@ -103,6 +112,8 @@ public class AdbHelper {
             adb = AdbConnection.create(sock, crypto);
         } catch (IOException e) {
             e.printStackTrace();
+            if(adbConnectListener != null)
+                adbConnectListener.error(e.getMessage());
             return;
         }
 
@@ -115,27 +126,30 @@ public class AdbHelper {
             adb.connect();
         } catch (IOException e) {
             e.printStackTrace();
+            if(adbConnectListener != null)
+                adbConnectListener.error(e.getMessage());
             return;
         } catch (InterruptedException e) {
             e.printStackTrace();
+            if(adbConnectListener != null)
+                adbConnectListener.error(e.getMessage());
             return;
         }
         System.out.println("ADB connected");
+        connected = true;
         if(adbConnectListener != null)
             adbConnectListener.adbConnected();
     }
 
-    boolean connect;
-
     public void connect(String ip) {
+//        if (connected) {
+            reset();
+//        }
         host = ip;
-        if (connect)
-            return;
-        connect = true;
         threadHandler.post(new Runnable() {
             @Override
             public void run() {
-                init();
+                adbConnect();
             }
         });
     }
@@ -144,25 +158,35 @@ public class AdbHelper {
         threadHandler.post(new Runnable() {
             @Override
             public void run() {
+                if(!connected){
+                    System.err.println("adb is not connected");
+                    return;
+                }
                 try {
                     PushAction pushAction = new PushAction(adb);
                     pushAction.setCallback(callback);
                     pushAction.push(context.getResources().openRawResource(R.raw.tvportal), remote_dir + remote_filename);
                 } catch (IOException e) {
                     e.printStackTrace();
+                    callback.fail(e.getMessage());
                 } catch (InterruptedException e) {
                     e.printStackTrace();
+                    callback.fail(e.getMessage());
                 }
             }
         });
     }
 
-    public void install(final InstallAction.Callback callback) {
+    public void install(final InstallWithDeleteAction.Callback callback) {
         threadHandler.post(new Runnable() {
             @Override
             public void run() {
+                if(!connected){
+                    System.err.println("adb is not connected");
+                    return;
+                }
                 try {
-                    InstallAction installAction = new InstallAction(adb);
+                    InstallWithDeleteAction installAction = new InstallWithDeleteAction(adb);
                     installAction.setCallback(callback);
                     installAction.install(remote_dir + remote_filename);
                 } catch (IOException e) {
@@ -178,9 +202,31 @@ public class AdbHelper {
     public void disconnect() {
         try {
             adb.close();
-            connect = false;
+            adb = null;
+            connected = false;
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    public void reset(){
+        if(adb != null){
+            try {
+                adb.close();
+                adb = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if(sock != null){
+            try {
+                sock.close();
+                sock = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        connected = false;
+    }
+
 }

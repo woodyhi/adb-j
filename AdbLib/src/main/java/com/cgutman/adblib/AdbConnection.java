@@ -124,11 +124,11 @@ public class AdbConnection implements Closeable {
 					try {
 						/* Read and parse a message off the socket's input stream */
 						AdbProtocol.AdbMessage msg = AdbProtocol.AdbMessage.parseAdbMessage(inputStream);
-						
+//						System.out.println("connectThread===command " + Integer.toHexString(msg.command));
+
 						/* Verify magic and checksum */
 						if (!AdbProtocol.validateMessage(msg))
 							continue;
-//						System.out.println("connectThread===command " + Integer.toHexString(msg.command));
 						switch (msg.command)
 						{
 						/* Stream-oriented commands */
