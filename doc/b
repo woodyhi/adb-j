@@ -1,0 +1,32 @@
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            String hex = Integer.toHexString(bytes[i] & 0xFF);
+            if (hex.length() < 2) {
+                sb.append(0);
+            }
+            sb.append(hex);
+        }
+        return sb.toString();
+    }
+
+
+
+
+
+
+
+
+
+    public String getErrorInfoFromException(Exception e) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        try {
+            e.printStackTrace(pw);
+            sw.close();
+            pw.close();
+        } catch (Exception e2) {
+            return "ErrorInfoFromException";
+        }
+        return "\r\n" + sw.toString() + "\r\n";
+    }

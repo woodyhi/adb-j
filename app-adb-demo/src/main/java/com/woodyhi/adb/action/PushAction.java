@@ -14,7 +14,7 @@ import java.nio.ByteOrder;
 /**
  * Created by June on 2018/6/25.
  */
-public class PushAction extends AdbAction{
+public class PushAction extends AdbAction {
     private AdbStream stream;
 
     private PushCallback callback;
@@ -31,19 +31,22 @@ public class PushAction extends AdbAction{
     public PushAction() {
     }
 
-    public void setFilePath(String filePath){
+    public void setFilePath(String filePath) {
         this.mFilePath = filePath;
     }
 
-    public void setInputStream(InputStream in){
+    public void setInputStream(InputStream in) {
         this.mInputStream = in;
     }
 
-    public void setRemotePath(String remotePath){
+    public void setRemotePath(String remotePath) {
         this.mRemotePath = remotePath;
     }
 
     private void openStream() {
+        if (adbConnection == null) {
+            throw new NullPointerException("adb未连接");
+        }
         try {
             stream = adbConnection.open("sync:");
         } catch (UnsupportedEncodingException e) {
@@ -58,7 +61,7 @@ public class PushAction extends AdbAction{
             e.printStackTrace();
             onFail(e.getMessage());
             return;
-        } catch (IllegalStateException e){
+        } catch (IllegalStateException e) {
             e.printStackTrace();
             onFail(e.getMessage());
             return;
@@ -74,7 +77,7 @@ public class PushAction extends AdbAction{
 
                         byte[] bytes = stream.read();
                         String result = new String(bytes, "US-ASCII").replace("\0", "");
-                        if("OKAY".equals(result)){
+                        if ("OKAY".equals(result)) {
                             onSuccess();
                         }
 
@@ -92,20 +95,9 @@ public class PushAction extends AdbAction{
         }).start();
     }
 
-    public static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for(int i = 0; i < bytes.length; i++) {
-            String hex = Integer.toHexString(bytes[i] & 0xFF);
-            if(hex.length() < 2){
-                sb.append(0);
-            }
-            sb.append(hex);
-        }
-        return sb.toString();
-    }
 
     public void push(String filepath, String remotepath) throws IOException, InterruptedException {
-        if(stream == null)
+        if (stream == null)
             return;
         File file = new File(filepath);
         FileInputStream inputStream = new FileInputStream(file);
@@ -113,15 +105,14 @@ public class PushAction extends AdbAction{
     }
 
     public void push(InputStream inputStream, String remotepath) throws IOException, InterruptedException {
-        if(stream == null)
+        if (stream == null)
             return;
-        if(callback != null){
+        if (callback != null) {
             callback.onStart();
         }
         /* first step */
         //        "{filename,mode}"
         //        String remote = "/sdcard/tmp/test.apk,33206";
-        //        if(remotepath != null && remotepath.length() > 0)
         String remote = remotepath;
 
         ByteBuffer buf = ByteBuffer.allocate(8 + remote.length()).order(ByteOrder.LITTLE_ENDIAN);
@@ -132,7 +123,7 @@ public class PushAction extends AdbAction{
 
         int totalSize = inputStream.available();
         int progress = 0;
-//        System.out.println("file length : " + totalSize);
+        //        System.out.println("file length : " + totalSize);
         /* second step */
         int buffer_size = 2048;
         int len;
@@ -153,33 +144,40 @@ public class PushAction extends AdbAction{
         stream.write(order.array());
 
         /* fourth step */
-//        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-//        order2.put("QUIT\0".getBytes("UTF-8"));
-//        stream.write(order2.array());
+        //        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
+        //        order2.put("QUIT\0".getBytes("UTF-8"));
+        //        stream.write(order2.array());
     }
 
     private void onSuccess() {
         System.out.println("push onSuccess ^0^");
-        if(callback != null){
+        if (callback != null) {
             callback.onSuccess();
         }
     }
 
-    private void onProgress(int total, int progress){
-        if(callback != null){
+    private void onProgress(int total, int progress) {
+        if (callback != null) {
             callback.onProgress(total, progress);
         }
     }
 
     private void onFail(String msg) {
-        if(callback != null){
+        if (callback != null) {
             callback.onFail(msg);
         }
     }
 
     @Override
     public void run() {
-        openStream();
+        try {
+            openStream();
+        } catch (Exception e) {
+            e.printStackTrace();
+            onFail(e.getMessage());
+            return;
+        }
+
         try {
             push(mInputStream, mRemotePath);
         } catch (IOException e) {
@@ -188,14 +186,21 @@ public class PushAction extends AdbAction{
         } catch (InterruptedException e) {
             e.printStackTrace();
             onFail(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            onFail(e.getMessage());
         }
     }
 
 
     public interface PushCallback {
         void onStart();
+
         void onSuccess();
+
         void onProgress(int total, int progress);
+
         void onFail(String msg);
     }
+
 }

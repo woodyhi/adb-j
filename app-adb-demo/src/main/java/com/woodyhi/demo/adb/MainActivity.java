@@ -52,8 +52,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         pushBtn.setOnClickListener(new View.OnClickListener() {
-            int index = -1;
-            long time;
+            private int index = -1;
+            private long time;
 
             @Override
             public void onClick(View v) {
@@ -65,11 +65,12 @@ public class MainActivity extends AppCompatActivity {
                     public void onStart() {
                         index = -1;
                         time = System.currentTimeMillis();
+                        log("\npush file");
                     }
 
                     @Override
                     public void onSuccess() {
-                        log("push onSuccess ^0^");
+                        log("上传成功了！");
                     }
 
                     @Override
@@ -83,7 +84,7 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                String fm = "totalSize:%s, transfered:%s, avg speed: %s";
+                                String fm = "size:%s,transfer:%s,avgSpeed: %s";
                                 String m = String.format(fm, total, progress, spd);
                                 if (index == -1) {
                                     logList.add(m);
@@ -114,8 +115,8 @@ public class MainActivity extends AppCompatActivity {
                 installAction.setCallback(new InstallAction.InstallCallback() {
                     @Override
                     public void onStart() {
-                        log("start install");
-                        log("如有安装提示框，请点击‘安装’按钮");
+                        log("\nstart install");
+                        log("目标设备如显示安装提示框，请点击‘安装’按钮");
                     }
 
                     @Override

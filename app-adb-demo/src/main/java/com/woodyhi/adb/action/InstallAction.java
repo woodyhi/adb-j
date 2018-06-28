@@ -29,6 +29,9 @@ public class InstallAction extends AdbAction{
     }
 
     private void openStream(String apkpath) {
+        if (adbConnection == null) {
+            throw new NullPointerException("adb未连接");
+        }
         // Open the shell stream of ADB
         try {
             String cmd1 = "pm install -t -r " + apkpath;
@@ -80,7 +83,7 @@ public class InstallAction extends AdbAction{
         }).start();
     }
 
-    public void install(String apkpath) throws IOException, InterruptedException {
+    public void install(String apkpath) {
         if(callback != null){
             callback.onStart();
         }
@@ -91,10 +94,7 @@ public class InstallAction extends AdbAction{
     public void run() {
         try {
             install(mApkpath);
-        } catch (IOException e) {
-            e.printStackTrace();
-            onFail(e.getMessage());
-        } catch (InterruptedException e) {
+        } catch (Exception e){
             e.printStackTrace();
             onFail(e.getMessage());
         }
