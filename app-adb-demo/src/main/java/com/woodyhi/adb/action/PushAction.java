@@ -77,6 +77,8 @@ public class PushAction extends AdbAction {
 
                         byte[] bytes = stream.read();
                         String result = new String(bytes, "US-ASCII").replace("\0", "");
+                        System.out.println(PushAction.class.getSimpleName() + ":" + result);
+
                         if ("OKAY".equals(result)) {
                             onSuccess();
                         }
@@ -139,14 +141,14 @@ public class PushAction extends AdbAction {
         inputStream.close();
 
         /* third step */
-        ByteBuffer order = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
-        order.put(("DONE\0").getBytes("UTF-8"));
-        stream.write(order.array());
+//        ByteBuffer order = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
+//        order.put(("DONE\0").getBytes("UTF-8"));
+//        stream.write(order.array());
 
         /* fourth step */
-        //        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-        //        order2.put("QUIT\0".getBytes("UTF-8"));
-        //        stream.write(order2.array());
+//        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
+//        order2.put("QUIT\0".getBytes("UTF-8"));
+//        stream.write(order2.array());
     }
 
     private void onSuccess() {
@@ -179,7 +181,11 @@ public class PushAction extends AdbAction {
         }
 
         try {
-            push(mInputStream, mRemotePath);
+            if (mFilePath != null) {
+                push(mFilePath, mRemotePath);
+            } else {
+                push(mInputStream, mRemotePath);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             onFail(e.getMessage());
