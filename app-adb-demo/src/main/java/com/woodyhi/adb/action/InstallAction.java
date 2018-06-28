@@ -107,8 +107,8 @@ public class InstallAction extends AdbAction{
 
     public interface InstallCallback {
         void onStart();
-        void onSuccess();
         void onReceive(String msg);
+        void onSuccess();
         void onFail(String msg);
     }
 }

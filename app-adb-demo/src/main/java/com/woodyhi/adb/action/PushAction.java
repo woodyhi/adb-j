@@ -15,6 +15,9 @@ import java.nio.ByteOrder;
  * Created by June on 2018/6/25.
  */
 public class PushAction extends AdbAction {
+
+    private int ADB_MAX_DATA;
+
     private AdbStream stream;
 
     private PushCallback callback;
@@ -112,10 +115,11 @@ public class PushAction extends AdbAction {
         if (callback != null) {
             callback.onStart();
         }
+
         /* first step */
         //        "{filename,mode}"
         //        String remote = "/sdcard/tmp/test.apk,33206";
-        String remote = remotepath;
+        String remote = remotepath + ",33188";
 
         ByteBuffer buf = ByteBuffer.allocate(8 + remote.length()).order(ByteOrder.LITTLE_ENDIAN);
         buf.put("SEND".getBytes("UTF-8"));
@@ -128,6 +132,9 @@ public class PushAction extends AdbAction {
         //        System.out.println("file length : " + totalSize);
         /* second step */
         int buffer_size = 2048;
+        if (ADB_MAX_DATA > 0) {
+            buffer_size = ADB_MAX_DATA - 8;
+        }
         int len;
         byte[] buff = new byte[buffer_size];
         while ((len = inputStream.read(buff)) != -1) {
@@ -141,14 +148,14 @@ public class PushAction extends AdbAction {
         inputStream.close();
 
         /* third step */
-//        ByteBuffer order = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
-//        order.put(("DONE\0").getBytes("UTF-8"));
-//        stream.write(order.array());
+        ByteBuffer order = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
+        order.put(("DONE\0").getBytes("UTF-8"));
+        stream.write(order.array());
 
         /* fourth step */
-//        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-//        order2.put("QUIT\0".getBytes("UTF-8"));
-//        stream.write(order2.array());
+        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
+        order2.put("QUIT\0".getBytes("UTF-8"));
+        stream.write(order2.array());
     }
 
     private void onSuccess() {
@@ -159,6 +166,7 @@ public class PushAction extends AdbAction {
     }
 
     private void onProgress(int total, int progress) {
+        //        System.out.println("total:" + total + ", progress:" + progress);
         if (callback != null) {
             callback.onProgress(total, progress);
         }
@@ -172,6 +180,18 @@ public class PushAction extends AdbAction {
 
     @Override
     public void run() {
+        try {
+            int max = adbConnection.getMaxData();
+            System.out.println("remote maxdata : " + max);
+            ADB_MAX_DATA = max;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         try {
             openStream();
         } catch (Exception e) {
@@ -201,11 +221,8 @@ public class PushAction extends AdbAction {
 
     public interface PushCallback {
         void onStart();
-
-        void onSuccess();
-
         void onProgress(int total, int progress);
-
+        void onSuccess();
         void onFail(String msg);
     }
 

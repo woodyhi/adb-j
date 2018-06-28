@@ -69,11 +69,6 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onSuccess() {
-                        log("上传成功了！");
-                    }
-
-                    @Override
                     public void onProgress(final int total, final int progress) {
                         String sp = "";
                         long d = System.currentTimeMillis() - time;
@@ -99,6 +94,12 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
+                    public void onSuccess() {
+                        int dt = (int) ((System.currentTimeMillis() - time) / 1000);
+                        log("上传成功了！   耗时" + dt + "秒");
+                    }
+
+                    @Override
                     public void onFail(String msg) {
                         log(msg);
                     }
@@ -120,13 +121,13 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onSuccess() {
-                        log("安装成功了！");
+                    public void onReceive(String msg) {
+                        log(msg);
                     }
 
                     @Override
-                    public void onReceive(String msg) {
-                        log(msg);
+                    public void onSuccess() {
+                        log("安装成功了！");
                     }
 
                     @Override
