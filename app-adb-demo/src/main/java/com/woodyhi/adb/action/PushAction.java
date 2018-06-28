@@ -1,7 +1,7 @@
 package com.woodyhi.adb.action;
 
-import com.cgutman.adblib.AdbConnection;
 import com.cgutman.adblib.AdbStream;
+import com.woodyhi.adb.AdbAction;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,40 +14,53 @@ import java.nio.ByteOrder;
 /**
  * Created by June on 2018/6/25.
  */
-public class PushAction {
-
-    private AdbConnection adb;
+public class PushAction extends AdbAction{
     private AdbStream stream;
 
-    private Callback callback;
+    private PushCallback callback;
 
-    public void setCallback(Callback callback) {
+    private String mFilePath;
+    private InputStream mInputStream;
+
+    private String mRemotePath;
+
+    public void setCallback(PushCallback callback) {
         this.callback = callback;
     }
 
-    public PushAction(AdbConnection adb) {
-        this.adb = adb;
-        createStream();
+    public PushAction() {
     }
 
-    private void createStream() {
+    public void setFilePath(String filePath){
+        this.mFilePath = filePath;
+    }
+
+    public void setInputStream(InputStream in){
+        this.mInputStream = in;
+    }
+
+    public void setRemotePath(String remotePath){
+        this.mRemotePath = remotePath;
+    }
+
+    private void openStream() {
         try {
-            stream = adb.open("sync:");
+            stream = adbConnection.open("sync:");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
-            onFail();
+            onFail(e.getMessage());
             return;
         } catch (IOException e) {
             e.printStackTrace();
-            onFail();
+            onFail(e.getMessage());
             return;
         } catch (InterruptedException e) {
             e.printStackTrace();
-            onFail();
+            onFail(e.getMessage());
             return;
         } catch (IllegalStateException e){
             e.printStackTrace();
-            onFail();
+            onFail(e.getMessage());
             return;
         }
 
@@ -92,12 +105,16 @@ public class PushAction {
     }
 
     public void push(String filepath, String remotepath) throws IOException, InterruptedException {
+        if(stream == null)
+            return;
         File file = new File(filepath);
         FileInputStream inputStream = new FileInputStream(file);
         push(inputStream, remotepath);
     }
 
     public void push(InputStream inputStream, String remotepath) throws IOException, InterruptedException {
+        if(stream == null)
+            return;
         if(callback != null){
             callback.onStart();
         }
@@ -142,31 +159,43 @@ public class PushAction {
     }
 
     private void onSuccess() {
-        System.out.println("push success ^0^");
+        System.out.println("push onSuccess ^0^");
         if(callback != null){
-            callback.success();
+            callback.onSuccess();
         }
     }
 
     private void onProgress(int total, int progress){
-//        System.out.println(progress + "/" + total);
         if(callback != null){
-            callback.progress(total, progress);
+            callback.onProgress(total, progress);
         }
     }
 
-    private void onFail() {
-        System.out.println("push fail T_T");
+    private void onFail(String msg) {
         if(callback != null){
-            callback.fail("push fail T_T");
+            callback.onFail(msg);
+        }
+    }
+
+    @Override
+    public void run() {
+        openStream();
+        try {
+            push(mInputStream, mRemotePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+            onFail(e.getMessage());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            onFail(e.getMessage());
         }
     }
 
 
-    public interface Callback {
+    public interface PushCallback {
         void onStart();
-        void success();
-        void progress(int total, int progress);
-        void fail(String msg);
+        void onSuccess();
+        void onProgress(int total, int progress);
+        void onFail(String msg);
     }
 }

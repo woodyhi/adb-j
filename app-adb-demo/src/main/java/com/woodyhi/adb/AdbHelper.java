@@ -6,10 +6,8 @@ import android.os.HandlerThread;
 
 import com.cgutman.adblib.AdbConnection;
 import com.cgutman.adblib.AdbCrypto;
-import com.woodyhi.adb.action.InstallWithDeleteAction;
-import com.woodyhi.adb.action.PushAction;
-import com.woodyhi.demo.adb.R;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -23,18 +21,19 @@ import java.util.logging.Logger;
  */
 public class AdbHelper {
     Logger logger = Logger.getLogger(AdbHelper.class.getName());
-    //        static String host = "10.102.17.163";
-//    static String host = "10.102.20.11";
-    static String host = "192.168.1.104";
-    //    static String host = "10.102.17.150";
+
+    /* time in milliseconds */
+    static final int SOCKET_TIMEOUT = 5000;
+
+    private String host;
     static int port = 5555;
 
     /* local */
-    static String tmpdir;
+    static String rsaKeySaveDir;
 
     /* remote path */
-    static String remote_dir = "/data/local/tmp/";
-    static String remote_filename = "tvportal.apk";
+    public static String remote_dir = "/data/local/tmp/";
+    public static String remote_filename = "tvportal.apk";
 
     private Context context;
 
@@ -53,17 +52,26 @@ public class AdbHelper {
         this.adbConnectListener = adbConnectListener;
     }
 
-    public interface AdbConnectListener{
+    public interface AdbConnectListener {
         void socketConnectStart();
+
         void socketConnected();
+
         void adbConnectStart();
+
         void adbConnected();
+
         void error(String msg);
     }
 
     public AdbHelper(Context context) {
         this.context = context;
-        tmpdir = context.getFilesDir().getAbsolutePath();
+        rsaKeySaveDir = context.getFilesDir().getAbsolutePath() + "/adbconnection";
+        try {
+            new File(rsaKeySaveDir).mkdirs();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         handleThread = new HandlerThread("adb");
         handleThread.start();
         threadHandler = new Handler(handleThread.getLooper());
@@ -73,7 +81,7 @@ public class AdbHelper {
     private void adbConnect() {
         // Setup the crypto object required for the AdbConnection
         try {
-            crypto = AdbCryptoUtil.setupCrypto(tmpdir + "/pub.key", tmpdir + "/priv.key");
+            crypto = AdbCryptoUtil.setupCrypto(rsaKeySaveDir + "/pub.key", rsaKeySaveDir + "/priv.key");
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
             return;
@@ -91,15 +99,15 @@ public class AdbHelper {
             adbConnectListener.socketConnectStart();
         try {
             sock = new Socket();
-            sock.connect(new InetSocketAddress(host, port), 3000);
+            sock.connect(new InetSocketAddress(host, port), SOCKET_TIMEOUT);
         } catch (UnknownHostException e) {
             e.printStackTrace();
-            if(adbConnectListener != null)
+            if (adbConnectListener != null)
                 adbConnectListener.error(e.getMessage());
             return;
         } catch (IOException e) {
             e.printStackTrace();
-            if(adbConnectListener != null)
+            if (adbConnectListener != null)
                 adbConnectListener.error(e.getMessage());
             return;
         }
@@ -112,7 +120,7 @@ public class AdbHelper {
             adb = AdbConnection.create(sock, crypto);
         } catch (IOException e) {
             e.printStackTrace();
-            if(adbConnectListener != null)
+            if (adbConnectListener != null)
                 adbConnectListener.error(e.getMessage());
             return;
         }
@@ -126,25 +134,25 @@ public class AdbHelper {
             adb.connect();
         } catch (IOException e) {
             e.printStackTrace();
-            if(adbConnectListener != null)
+            if (adbConnectListener != null)
                 adbConnectListener.error(e.getMessage());
             return;
         } catch (InterruptedException e) {
             e.printStackTrace();
-            if(adbConnectListener != null)
+            if (adbConnectListener != null)
                 adbConnectListener.error(e.getMessage());
             return;
         }
         System.out.println("ADB connected");
         connected = true;
-        if(adbConnectListener != null)
+        if (adbConnectListener != null)
             adbConnectListener.adbConnected();
     }
 
     public void connect(String ip) {
-//        if (connected) {
-            reset();
-//        }
+        //        if (connected) {
+        reset();
+        //        }
         host = ip;
         threadHandler.post(new Runnable() {
             @Override
@@ -154,63 +162,13 @@ public class AdbHelper {
         });
     }
 
-    public void push(final PushAction.Callback callback) {
-        threadHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if(!connected){
-                    System.err.println("adb is not connected");
-                    return;
-                }
-                try {
-                    PushAction pushAction = new PushAction(adb);
-                    pushAction.setCallback(callback);
-                    pushAction.push(context.getResources().openRawResource(R.raw.tvportal), remote_dir + remote_filename);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    callback.fail(e.getMessage());
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    callback.fail(e.getMessage());
-                }
-            }
-        });
+    public void execute(AdbAction adbAction) {
+        adbAction.setAdb(adb);
+        threadHandler.post(adbAction);
     }
 
-    public void install(final InstallWithDeleteAction.Callback callback) {
-        threadHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if(!connected){
-                    System.err.println("adb is not connected");
-                    return;
-                }
-                try {
-                    InstallWithDeleteAction installAction = new InstallWithDeleteAction(adb);
-                    installAction.setCallback(callback);
-                    installAction.install(remote_dir + remote_filename);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
-
-    public void disconnect() {
-        try {
-            adb.close();
-            adb = null;
-            connected = false;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void reset(){
-        if(adb != null){
+    public void reset() {
+        if (adb != null) {
             try {
                 adb.close();
                 adb = null;
@@ -218,7 +176,7 @@ public class AdbHelper {
                 e.printStackTrace();
             }
         }
-        if(sock != null){
+        if (sock != null) {
             try {
                 sock.close();
                 sock = null;

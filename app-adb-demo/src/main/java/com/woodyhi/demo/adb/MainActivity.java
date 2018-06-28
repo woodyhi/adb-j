@@ -11,7 +11,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.woodyhi.adb.AdbHelper;
-import com.woodyhi.adb.action.InstallWithDeleteAction;
+import com.woodyhi.adb.action.InstallAction;
 import com.woodyhi.adb.action.PushAction;
 
 import java.util.ArrayList;
@@ -54,39 +54,41 @@ public class MainActivity extends AppCompatActivity {
         pushBtn.setOnClickListener(new View.OnClickListener() {
             int index = -1;
             long time;
+
             @Override
             public void onClick(View v) {
-                adbHelper.push(new PushAction.Callback() {
+                PushAction pushAction = new PushAction();
+                pushAction.setInputStream(getApplicationContext().getResources().openRawResource(R.raw.tvportal));
+                pushAction.setRemotePath(AdbHelper.remote_dir + AdbHelper.remote_filename);
+                pushAction.setCallback(new PushAction.PushCallback() {
                     @Override
                     public void onStart() {
                         index = -1;
+                        time = System.currentTimeMillis();
                     }
 
                     @Override
-                    public void success() {
-                        log("push success ^0^");
+                    public void onSuccess() {
+                        log("push onSuccess ^0^");
                     }
 
                     @Override
-                    public void progress(final int total, final int progress) {
+                    public void onProgress(final int total, final int progress) {
                         String sp = "";
-                        if(time == 0){
-                            time = System.currentTimeMillis();
-                        }else {
-                            long d = System.currentTimeMillis() - time;
-                            float s = (float)progress  / d;
-                            sp = String.format("%.2fKB/s", s);
-                        }
+                        long d = System.currentTimeMillis() - time;
+                        float s = (float) progress / d;
+                        sp = String.format("%.2fKB/s", s);
+
                         final String spd = sp;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 String fm = "totalSize:%s, transfered:%s, avg speed: %s";
                                 String m = String.format(fm, total, progress, spd);
-                                if(index == -1){
+                                if (index == -1) {
                                     logList.add(m);
                                     index = logList.indexOf(m);
-                                }else {
+                                } else {
                                     logList.remove(index);
                                     logList.add(index, m);
                                 }
@@ -96,17 +98,20 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void fail(String msg) {
+                    public void onFail(String msg) {
                         log(msg);
                     }
                 });
+                adbHelper.execute(pushAction);
             }
         });
 
         installBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                adbHelper.install(new InstallWithDeleteAction.Callback() {
+                InstallAction installAction = new InstallAction();
+                installAction.setApkpath(AdbHelper.remote_dir + AdbHelper.remote_filename);
+                installAction.setCallback(new InstallAction.InstallCallback() {
                     @Override
                     public void onStart() {
                         log("start install");
@@ -124,10 +129,11 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onFail() {
-
+                    public void onFail(String msg) {
+                        log(msg);
                     }
                 });
+                adbHelper.execute(installAction);
             }
         });
 
@@ -161,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void log(final String msg){
+    private void log(final String msg) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {

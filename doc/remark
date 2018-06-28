@@ -1,0 +1,4 @@
+有个1加手机
+通过usb 执行adb tcpip 5555后
+adblib 无法连接，不弹调试授权框，连接时手机状态栏背景色闪烁了一下，就没有然后了
+然后用usb 执行“stop adbd，start adbd”后，再连就可以了

@@ -1,7 +1,7 @@
 package com.woodyhi.adb.action;
 
-import com.cgutman.adblib.AdbConnection;
 import com.cgutman.adblib.AdbStream;
+import com.woodyhi.adb.AdbAction;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -9,25 +9,32 @@ import java.io.UnsupportedEncodingException;
 /**
  * Created by June on 2018/6/25.
  */
-public class InstallAction {
+public class InstallAction extends AdbAction{
 
-    private AdbConnection adb;
     private AdbStream adbStream;
 
-    private Callback callback;
+    private String mApkpath;
 
-    public void setCallback(Callback callback) {
+    private InstallCallback callback;
+
+    public void setCallback(InstallCallback callback) {
         this.callback = callback;
     }
 
-    public InstallAction(AdbConnection adbConnection) {
-        this.adb = adbConnection;
+    public InstallAction() {
+    }
+
+    public void setApkpath(String apkpath){
+        this.mApkpath = apkpath;
     }
 
     private void openStream(String apkpath) {
         // Open the shell stream of ADB
         try {
-            adbStream = adb.open("shell:pm install -t -r " + apkpath);
+            String cmd1 = "pm install -t -r " + apkpath;
+            String cmd2 = "rm " + apkpath;
+            String cmd = cmd1 + ";" + cmd2; // 安装后无论结果都删除文件
+            adbStream = adbConnection.open("shell:" + cmd);
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             return;
@@ -80,12 +87,28 @@ public class InstallAction {
         openStream(apkpath);
     }
 
+    @Override
+    public void run() {
+        try {
+            install(mApkpath);
+        } catch (IOException e) {
+            e.printStackTrace();
+            onFail(e.getMessage());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            onFail(e.getMessage());
+        }
+    }
 
+    private void onFail(String msg){
+        if(callback != null)
+            callback.onFail(msg);
+    }
 
-    public interface Callback{
+    public interface InstallCallback {
         void onStart();
         void onSuccess();
         void onReceive(String msg);
-        void onFail();
+        void onFail(String msg);
     }
 }

@@ -1,4 +1,4 @@
-package com.cgutman.adblib;
+package test;
 
 import com.cgutman.adblib.AdbBase64;
 import com.cgutman.adblib.AdbConnection;
@@ -16,9 +16,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Scanner;
 
-/**
- * Created by June on 2018/6/21.
- */
 public class AdbTest {
     // This implements the AdbBase64 interface required for AdbCrypto
     public static AdbBase64 getBase64Impl() {
@@ -97,7 +94,7 @@ public class AdbTest {
         System.out.println("Socket connecting...");
         try {
 //            sock = new Socket("10.102.20.11", 5555);
-            sock = new Socket("10.102.17.150", 5555);
+            sock = new Socket("10.102.21.99", 5555);
         } catch (UnknownHostException e) {
             e.printStackTrace();
             return;
@@ -167,7 +164,8 @@ public class AdbTest {
         // We become the sending thread
         for (;;) {
             try {
-                stream.write(in.nextLine()+'\n');
+                String s = in.nextLine()+'\n';
+                stream.write(s);
             } catch (IOException e) {
                 e.printStackTrace();
                 return;

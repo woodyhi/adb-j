@@ -9,10 +9,7 @@ import java.io.UnsupportedEncodingException;
 /**
  * Created by June on 2018/6/25.
  */
-public class InstallWithDeleteAction {
-
-    private Object WaitStreamOpenLOCK = new Object();
-    private Object WaitInstallSuccessLOCK = new Object();
+public class InstallWithDeleteAction2 {
 
     private AdbConnection adb;
     private AdbStream adbStream;
@@ -23,14 +20,16 @@ public class InstallWithDeleteAction {
         this.callback = callback;
     }
 
-    public InstallWithDeleteAction(AdbConnection adbConnection) {
+    public InstallWithDeleteAction2(AdbConnection adbConnection) {
         this.adb = adbConnection;
     }
 
     private void openStream(String apkpath) {
         // Open the shell stream of ADB
         try {
-            adbStream = adb.open("shell:");
+            String cmd1 = "pm install -t -r " + apkpath;
+            String cmd2 = "rm " + apkpath;
+            adbStream = adb.open("shell:" + cmd1 + ";" + cmd2);
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             return;
@@ -55,13 +54,7 @@ public class InstallWithDeleteAction {
                         byte[] bytes = adbStream.read();
                         String result = new String(bytes, "US-ASCII");
 
-                        System.err.println("InstallWithDeleteAction:" + result);
-
-                        if (result != null && result.startsWith("shell@")) {
-                            synchronized (WaitStreamOpenLOCK) {
-                                WaitStreamOpenLOCK.notify();
-                            }
-                        }
+                        System.err.println("InstallWithDeleteAction2:" + result);
 
                         if (callback != null) {
                             callback.onReceive(result);
@@ -70,10 +63,6 @@ public class InstallWithDeleteAction {
 
                         if ("Success\r\n".equals(result)) {
                             System.out.println("install sucess ^0^");
-
-                            synchronized (WaitInstallSuccessLOCK) {
-                                WaitInstallSuccessLOCK.notify();
-                            }
 
                             if (callback != null) {
                                 callback.onSuccess();
@@ -102,19 +91,6 @@ public class InstallWithDeleteAction {
         if (adbStream == null) {
             return;
         }
-        synchronized (WaitStreamOpenLOCK) {
-            //            System.out.println("waiting shell opened");
-            WaitStreamOpenLOCK.wait();
-            //            System.out.println("excuting pm install");
-        }
-        adbStream.write("pm install -t -r " + apkpath + '\n');
-        synchronized (WaitInstallSuccessLOCK) {
-            //            System.out.println("waiting install result");
-            WaitInstallSuccessLOCK.wait();
-            //            System.out.println("excuting rm ");
-        }
-        // 安装成功后删除
-        adbStream.write("rm " + apkpath + '\n');
     }
 
 
