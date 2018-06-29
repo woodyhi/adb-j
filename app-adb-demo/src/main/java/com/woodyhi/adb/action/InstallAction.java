@@ -63,7 +63,6 @@ public class InstallAction extends AdbAction{
                         }
 
                         if("Success\r\n".equals(result)){
-                            System.out.println("install sucess ^0^");
                             adbStream.close();
                             if(callback != null){
                                 callback.onSuccess();
