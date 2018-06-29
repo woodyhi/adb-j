@@ -58,8 +58,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 PushAction pushAction = new PushAction();
-                pushAction.setInputStream(getApplicationContext().getResources().openRawResource(R.raw.tvportal));
-                pushAction.setRemotePath(AdbHelper.remote_dir + AdbHelper.remote_filename);
+                pushAction.setIO(getApplicationContext().getResources().openRawResource(R.raw.tvportal),
+                        AdbHelper.remote_dir + AdbHelper.remote_filename);
                 pushAction.setCallback(new PushAction.PushCallback() {
                     @Override
                     public void onStart() {

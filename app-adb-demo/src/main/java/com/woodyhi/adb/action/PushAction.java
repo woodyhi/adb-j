@@ -15,9 +15,6 @@ import java.nio.ByteOrder;
  * Created by June on 2018/6/25.
  */
 public class PushAction extends AdbAction {
-
-    private int ADB_MAX_DATA;
-
     private AdbStream stream;
 
     private PushCallback callback;
@@ -34,16 +31,22 @@ public class PushAction extends AdbAction {
     public PushAction() {
     }
 
-    public void setFilePath(String filePath) {
-        this.mFilePath = filePath;
+    /**
+     * @param source 本地文件路径 eg. /sdcard/x.apk
+     * @param dest   目标设备文件保存路径. eg. /sdcard/tmp/t.apk
+     */
+    public void setIO(String source, String dest) {
+        this.mFilePath = source;
+        this.mRemotePath = dest;
     }
 
-    public void setInputStream(InputStream in) {
-        this.mInputStream = in;
-    }
-
-    public void setRemotePath(String remotePath) {
-        this.mRemotePath = remotePath;
+    /**
+     * @param source   本地文件输入流
+     * @param dest 目标设备文件保存路径. eg. /sdcard/tmp/t.apk
+     */
+    public void setIO(InputStream source, String dest) {
+        this.mInputStream = source;
+        this.mRemotePath = dest;
     }
 
     private void openStream() {
@@ -100,24 +103,25 @@ public class PushAction extends AdbAction {
         }).start();
     }
 
-
     public void push(String filepath, String remotepath) throws IOException, InterruptedException {
-        if (stream == null)
-            return;
+        if (stream == null) {
+            throw new NullPointerException("adb stream is null");
+        }
         File file = new File(filepath);
         FileInputStream inputStream = new FileInputStream(file);
         push(inputStream, remotepath);
     }
 
     public void push(InputStream inputStream, String remotepath) throws IOException, InterruptedException {
-        if (stream == null)
-            return;
+        if (stream == null) {
+            throw new NullPointerException("adb stream is null");
+        }
+
         if (callback != null) {
             callback.onStart();
         }
 
-        /* first step */
-        //        "{filename,mode}"
+        //        "{filepath,mode}"
         //        String remote = "/sdcard/tmp/test.apk,33206";
         String remote = remotepath + ",33188";
 
@@ -129,12 +133,8 @@ public class PushAction extends AdbAction {
 
         int totalSize = inputStream.available();
         int progress = 0;
-        //        System.out.println("file length : " + totalSize);
-        /* second step */
+
         int buffer_size = 2048;
-        if (ADB_MAX_DATA > 0) {
-            buffer_size = ADB_MAX_DATA - 8;
-        }
         int len;
         byte[] buff = new byte[buffer_size];
         while ((len = inputStream.read(buff)) != -1) {
@@ -147,14 +147,12 @@ public class PushAction extends AdbAction {
         }
         inputStream.close();
 
-        /* third step */
-        ByteBuffer order = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN);
-        order.put(("DONE\0").getBytes("UTF-8"));
+        ByteBuffer order = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        order.put("DONE".getBytes("UTF-8"));
         stream.write(order.array());
 
-        /* fourth step */
-        ByteBuffer order2 = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-        order2.put("QUIT\0".getBytes("UTF-8"));
+        ByteBuffer order2 = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        order2.put("QUIT".getBytes("UTF-8"));
         stream.write(order2.array());
     }
 
@@ -181,18 +179,6 @@ public class PushAction extends AdbAction {
     @Override
     public void run() {
         try {
-            int max = adbConnection.getMaxData();
-            System.out.println("remote maxdata : " + max);
-            ADB_MAX_DATA = max;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try {
             openStream();
         } catch (Exception e) {
             e.printStackTrace();
@@ -206,6 +192,7 @@ public class PushAction extends AdbAction {
             } else {
                 push(mInputStream, mRemotePath);
             }
+
         } catch (IOException e) {
             e.printStackTrace();
             onFail(e.getMessage());
@@ -218,11 +205,13 @@ public class PushAction extends AdbAction {
         }
     }
 
-
     public interface PushCallback {
         void onStart();
+
         void onProgress(int total, int progress);
+
         void onSuccess();
+
         void onFail(String msg);
     }
 
